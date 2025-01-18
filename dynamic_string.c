@@ -5,14 +5,6 @@
 
 #define BLOCK_SIZE 50
 
-String str_initialize() {
-  return (String) {
-    .str = NULL,
-    .alloc_size = 0,
-    .str_len = 0
-  };
-}
-
 bool str_resize(String *string, size_t str_len) {
   const size_t alloc_size = BLOCK_SIZE * (str_len / BLOCK_SIZE + 1);
   string->str = realloc(string->str, alloc_size);
