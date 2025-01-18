@@ -141,3 +141,34 @@ bool str_search_and_replace(string *s, const char *search, const char *replace) 
 
   return true;
 }
+
+bool str_write_to_file(const string s, FILE *f) {
+  if (!f) return false;
+
+  if (!fwrite(&s.str_len, sizeof(size_t), 1, f)) return false;
+  if (s.str_len>0 &&!fwrite(s.str, sizeof(char), s.str_len+1, f)) return false;
+
+  return true;
+}
+
+bool str_read_from_bfile(string *s, FILE *f) {
+  if (!f) return false;
+
+  size_t str_len;
+  if (!fread(&str_len, sizeof(size_t), 1, f)) return false;
+
+  // If it's empty
+  if (str_len == 0){
+    str_free(s);
+    return true;
+  }
+
+  if (!str_resize(s, str_len)
+      || !fread(s->str, sizeof(char), str_len+1, f)
+  ) {
+    return false;
+  }
+
+  s->str_len = str_len;
+  return true;
+}

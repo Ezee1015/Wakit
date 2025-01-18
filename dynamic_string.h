@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef struct {
   char *str;
@@ -22,6 +23,9 @@ bool str_replace(string *s, char *new_str);
 bool str_remove(string *s, const int from, const int to);
 bool str_insert_at(string *s, const int pos, const char *insert);
 bool str_search_and_replace(string *s, const char *search, const char *replace);
+
+bool str_write_to_file(string s, FILE *f );
+bool str_read_from_bfile(string *s, FILE *f);
 
 // DEBUG
 void str_inspect(string s);
