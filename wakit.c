@@ -86,21 +86,25 @@ int read_cmd_from_file(FILE *f, cmd *c) {
   return 0;
 }
 
+bool get_config_path(string *path) {
+  const char *home = getenv("HOME");
+  if (!home) return false;
+
+  str_append(path, home);
+  str_append(path, "/.config/wakit");
+  return true;
+}
+
 // Return values:
 //   1  --> Error while opening
 //   -1 --> Format error
 //   0  --> OK
 int load_cmd_list(cmd_node **list) {
-  // TODO Abstract this to a function String get_config_path();
-  const char *home = getenv("HOME");
-  if (!home) {
+  string path = STR_INIT;
+  if (!get_config_path(&path)) {
     ERROR("Get yourself a home");
     return 1;
   }
-
-  string path = STR_INIT;
-  str_append(&path, home);
-  str_append(&path, "/.config/wakit");
 
   FILE *f = fopen(path.str, "rb");
   if (!f) {
@@ -136,15 +140,11 @@ bool save_cmd_list(cmd_node *list) {
     return false;
   }
 
-  const char *home = getenv("HOME");
-  if (!home) {
-    ERROR("Get yourself a home");
-    return false;
-  }
-
   string path = STR_INIT;
-  str_append(&path, home);
-  str_append(&path, "/.config/wakit");
+  if (!get_config_path(&path)) {
+    ERROR("Get yourself a home");
+    return 1;
+  }
 
   FILE *f = fopen(path.str, "wb");
   if (!f) {
