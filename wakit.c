@@ -24,7 +24,12 @@ void print_help(const char *app_path) {
   printf("\t     --actions .................... Show only actions\n");
   printf("\t     --show-cmd ................... Show the console command to be executed for each command\n");
   printf("\t-r [name] ......................... Remove a command\n");
-  printf("\t-e ................................ Edit a command\n");
+  printf("\t-e [name] [variable] [new_value] .. Edit a command. Variables:\n");
+  printf("\t                                    - name: Name of the command\n");
+  printf("\t                                    - command: Command to execute\n");
+  printf("\t                                    - type: 'action' or 'profile'\n");
+  printf("\t                                    - app: if it's a profile, change the app that it's assign to. You should not input a new_value\n");
+  printf("\t                                    - default: if it's a profile, change if it's the default profile for the app. Values are: yes/no\n");
   printf("\t-m ................................ Run menu\n");
   printf("\t-s ................................ Run service\n");
 }
@@ -175,6 +180,15 @@ void free_cmd_list(cmd_node **list) {
     (*list) = (*list)->next;
     free_cmd(aux);
   }
+}
+
+cmd_node *search_cmd(cmd_node *list, char *cmd_name) {
+  if (!cmd_name) return NULL;
+
+  while (list && strcmp(list->info.name.str, cmd_name))
+    list = list->next;
+
+  return list;
 }
 
 cmd_node *default_app_profile(cmd_node *list, string app_name) {
@@ -407,8 +421,139 @@ int main(int argc, char *argv[]) {
     }
 
   } else if (!strcmp(argv[1], "-e")) {
-    ERROR("Not implemented"); // TODO
-    return 1;
+    if (argc == 2) {
+      ERROR("The name of the command and the variable to edit were expected, but none was given");
+      return 1;
+    }
+    if (argc == 3) {
+      ERROR("The variable to edit was expected, but it was not given");
+      return 1;
+    }
+
+    enum cmd_variable {
+      cmd_name,
+      cmd_command,
+      cmd_type,
+      cmd_app,
+      cmd_default
+    } var;
+
+    if (!strcmp(argv[3], "name")) {
+      if (argc != 5) {
+        ERROR("The name was expected, but more than one argument was given");
+        return 1;
+      }
+      var = cmd_name;
+
+    } else if (!strcmp(argv[3], "command")) {
+      if (argc != 5) {
+        ERROR("The command was expected, but more than one argument was given");
+        return 1;
+      }
+      var = cmd_command;
+
+    } else if (!strcmp(argv[3], "type")) {
+      if (argc != 5) {
+        ERROR("The command was expected, but more than one argument was given");
+        return 1;
+      }
+      if (strcmp(argv[4], "profile") && strcmp(argv[4], "action")) {
+        ERROR("'profile' or 'action' was expected for the new value of the type");
+        return 1;
+      }
+      var = cmd_type;
+
+    } else if (!strcmp(argv[3], "app")) {
+      if (argc != 4) {
+        ERROR("No argument was expected");
+        return 1;
+      }
+      var = cmd_app;
+
+    } else if (!strcmp(argv[3], "default")) {
+      if (argc != 5 || (strcmp(argv[4], "yes") && strcmp(argv[4], "no")) ) {
+        ERROR("'yes' or 'no' was expected");
+        return 1;
+      }
+      var = cmd_default;
+
+    } else {
+      ERROR("Variable not recognized...");
+      return 1;
+    }
+
+    cmd_node *list = NULL, *node = NULL;
+    if (load_cmd_list(&list) != 0) return 1;
+
+    if ( !(node = search_cmd(list, argv[2])) ) {
+      ERROR("Can't find the command...");
+      free_cmd_list(&list);
+      return 1;
+    }
+
+    string app_name = STR_INIT;
+    switch (var) {
+      case cmd_name:
+        str_replace(&(node->info.name), argv[4]);
+        break;
+
+      case cmd_command:
+        str_replace(&(node->info.cmd), argv[4]);
+        break;
+
+      case cmd_type:
+        str_replace(&(node->info.app), "generic");
+        node->info.default_for_app = false;
+        if (!strcmp(argv[4], "profile"))
+          node->info.type = Profile;
+        else
+          node->info.type = Action;
+        break;
+
+      case cmd_app:
+        if (node->info.type != Profile) {
+          ERROR("The command should be a profile in order to edit this...");
+          free_cmd_list(&list);
+          return 1;
+        }
+
+        if (question_yn("Do you want it to be a generic profile?")) {
+          str_replace(&(node->info.app), "generic");
+        } else {
+          if (!select_window(&app_name)) {
+            ERROR("App not compatible...");
+            free_cmd_list(&list);
+            str_free(&app_name);
+            return 1;
+          }
+          str_free(&(node->info.app));
+          node->info.app = app_name;
+        }
+
+      case cmd_default:
+        if (node->info.type != Profile) {
+          ERROR("The command should be a profile in order to edit this...");
+          free_cmd_list(&list);
+          return 1;
+        }
+
+        if (!strcmp(node->info.app.str, "generic")) {
+          ERROR("The command should not be a generic profile in order to edit this...");
+          free_cmd_list(&list);
+          return 1;
+        }
+
+        bool default_for_app = (!strcmp(argv[4], "yes"));
+        cmd_node *def_profile = NULL;
+        if ( default_for_app && (def_profile = default_app_profile(list, node->info.app)) ) {
+          DEBUG("There's already a default profile for the app. Disabling it...");
+          def_profile->info.default_for_app = false;
+        }
+        node->info.default_for_app = default_for_app;
+    }
+
+    if (!save_cmd_list(list)) ret = 1;
+    free_cmd_list(&list);
 
   } else if (!strcmp(argv[1], "-m")) {
     ERROR("Not implemented"); // TODO
