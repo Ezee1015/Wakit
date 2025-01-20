@@ -23,8 +23,8 @@ bool str_append(string *s, const char *append) {
     if (!str_resize(s, new_size)) return false;
   }
 
+  strcpy(s->str+s->str_len, append);
   s->str_len = new_size;
-  strcat(s->str, append);
   return true;
 }
 
