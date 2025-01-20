@@ -250,10 +250,10 @@ int create_command(char *name, char *command, char *type) {
   }
 
   // Make it the default profile if there's already one
-  cmd_node *defProfile = NULL;
-  if (new_cmd.default_for_app && (defProfile = default_app_profile(list, new_cmd.app))) {
+  cmd_node *def_profile = NULL;
+  if (new_cmd.default_for_app && (def_profile = default_app_profile(list, new_cmd.app))) {
     DEBUG("There's already a default profile for the app. Disabling it...");
-    defProfile->info.default_for_app = false;
+    def_profile->info.default_for_app = false;
   }
 
   if (!add_command(&list, new_cmd)) {
