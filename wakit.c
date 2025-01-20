@@ -279,9 +279,6 @@ int list_commands(int argc, char *argv[]) {
         return 1;
       }
       mode = Filter;
-      ERROR("Not implemented"); // TODO
-      free_cmd_list(&list);
-      return 1;
 
     } else if (!strcmp(argv[i], "--profiles")) {
       if (mode != Default) {
@@ -310,10 +307,18 @@ int list_commands(int argc, char *argv[]) {
     }
   }
 
+  string app_name = STR_INIT;
+  if (mode == Filter && !select_window(&app_name)) {
+    str_free(&app_name);
+    free_cmd_list(&list);
+    return 1;
+  }
+
   while (list) {
     if ( (mode == Default)
-         ||(mode == Profiles && list->info.type == Profile)
+         || (mode == Profiles && list->info.type == Profile)
          || (mode == Actions && list->info.type == Action)
+         || (mode == Filter && !strcmp(list->info.app.str, app_name.str))
     ) {
       if (list->info.type == Action)
         printf("--> %s (Action)", list->info.name.str);
