@@ -178,9 +178,13 @@ void free_cmd_list(cmd_node **list) {
 }
 
 cmd_node *default_app_profile(cmd_node *list, string app_name) {
-  if (!list) return NULL;
+  while (list) {
+    if (list->info.type==Profile && !strcmp(list->info.app.str, app_name.str) && list->info.default_for_app)
+      return list;
 
-  // TODO
+    list = list->next;
+  }
+
   return NULL;
 }
 
@@ -232,15 +236,10 @@ int create_command(char *name, char *command, char *type) {
   }
 
   // Make it the default profile if there's already one
-  if (new_cmd.default_for_app && default_app_profile(list, new_cmd.app)) {
-    string msg = STR_INIT;
-    str_append(&msg, "There's already a default app for ");
-    str_append(&msg, new_cmd.app.str);
-    DEBUG(msg.str);
-    str_free(&msg);
-
-    ERROR("NOT IMPLEMENTED");
-    // TODO Search the default profile for the app and make it not the default
+  cmd_node *defProfile = NULL;
+  if (new_cmd.default_for_app && (defProfile = default_app_profile(list, new_cmd.app))) {
+    DEBUG("There's already a default profile for the app. Disabling it...");
+    defProfile->info.default_for_app = false;
   }
 
   if (!add_command(&list, new_cmd)) {
