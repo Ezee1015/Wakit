@@ -66,6 +66,7 @@ bool str_replace(string *s, char *new_str) {
   }
 
   strcpy(s->str, new_str);
+  s->str_len = new_len;
 
   str_trim_excess(s);
   return true;
