@@ -3,20 +3,11 @@
 #include <string.h>
 
 #include "wakit.h"
+#include "cli_io.h"
 #include "dynamic_string.h"
 #include "window_manager.h"
 
 #define GTABLET "Wacom One by Wacom S Pen stylus"
-
-#define ERROR(msg) printf("%s:%d: [ERROR] %s\n", __FILE__, __LINE__, msg)
-#define DEBUG(msg) printf("%s:%d: [DEBUG] %s\n", __FILE__, __LINE__, msg)
-#define QUESTION_YN(msg) do {                                    \
-                           printf(msg " [y/n]: ");               \
-                           scanf("%c", &opt);                    \
-                         } while (opt != 'y' && opt != 'Y'       \
-                                  && opt != 'n' && opt != 'N');
-#define QUESTION_Y (opt == 'Y' || opt == 'y')
-#define QUESTION_N (opt == 'N' || opt == 'n')
 
 void print_help(const char *app_path) {
   printf("Wakit is a command manager for xsetwacom that allows per-application configuration.\n");
@@ -212,11 +203,7 @@ int create_command(char *name, char *command, char *type) {
   str_append(&new_cmd.cmd, command);
 
   if (new_cmd.type == Profile) {
-    char opt;
-    QUESTION_YN("Is custom to an app?");
-    getchar();
-
-    if (QUESTION_Y) {
+    if (question_yn("Is custom to an app?")) {
       if (!select_window(&new_cmd.app)) {
         ERROR("Sorry. App not compatible...");
         str_free(&new_cmd.name);
@@ -225,8 +212,7 @@ int create_command(char *name, char *command, char *type) {
         return 1;
       }
 
-      QUESTION_YN("Do you want to make it default for the app?");
-      new_cmd.default_for_app = QUESTION_Y;
+      new_cmd.default_for_app = question_yn("Do you want to make it default for the app?");
     } else {
       str_append(&new_cmd.app, "generic");
     }
@@ -427,11 +413,11 @@ int main(int argc, char *argv[]) {
     return 1;
 
   } else {
-    string error = STR_INIT;
-    str_append(&error, "Mode not recognized: ");
-    str_append(&error, argv[1]);
-    ERROR(error.str);
-    str_free(&error);
+    string error_msg = STR_INIT;
+    str_append(&error_msg, "Mode not recognized: ");
+    str_append(&error_msg, argv[1]);
+    ERROR(error_msg.str);
+    str_free(&error_msg);
 
     ret = 1;
   }
