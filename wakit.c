@@ -100,9 +100,10 @@ int load_cmd_list(cmd_node **list) {
   FILE *f = fopen(path.str, "rb");
   if (!f) {
     str_insert_at(&path, 0, "Can't open file ");
-    ERROR(path.str);
+    str_append(&path, ", continuing without loading it...");
+    DEBUG(path.str);
     str_free(&path);
-    return 1;
+    return 0;
   }
   str_free(&path);
 
