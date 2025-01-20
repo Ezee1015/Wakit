@@ -87,7 +87,7 @@ bool get_config_path(string *path) {
   if (!home) return false;
 
   str_append(path, home);
-  str_append(path, "/.config/wakit");
+  str_append(path, "/.wakit");
   return true;
 }
 
