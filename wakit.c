@@ -309,6 +309,7 @@ int list_commands(int argc, char *argv[]) {
 
   string app_name = STR_INIT;
   if (mode == Filter && !select_window(&app_name)) {
+    ERROR("Unable to filter for this app...");
     str_free(&app_name);
     free_cmd_list(&list);
     return 1;
