@@ -149,11 +149,12 @@ bool str_search_and_replace(string *s, const char *search, const char *replace) 
   if (!s || !search || !replace) return false;
 
   const size_t search_len = strlen(search);
+  const size_t replace_len = strlen(replace);
 
   for (int i=0; i<s->str_len; i++) {
     int match = 0;
     while (match < search_len
-           && match+i < s->str_len
+           && i+match < s->str_len
            && s->str[i+match] == search[match])
     {
       match++;
@@ -162,6 +163,7 @@ bool str_search_and_replace(string *s, const char *search, const char *replace) 
     if (match == search_len) {
       if (!str_remove(s, i, i+search_len-1)) return false;
       if (!str_insert_at(s, i, replace)) return false;
+      i += replace_len;
     }
   }
 
