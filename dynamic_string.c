@@ -61,7 +61,7 @@ bool str_replace(string *s, char *new_str) {
   const size_t new_len = strlen(new_str);
 
   // Reallocate new space if necessary
-  if (new_len > s->alloc_size-1) {
+  if (s->alloc_size == 0 || (new_len > s->alloc_size-1)) {
     if (!str_resize(s, new_len)) return false;
   }
 
