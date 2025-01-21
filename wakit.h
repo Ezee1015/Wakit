@@ -43,6 +43,7 @@ void print_cmd(cmd c, bool show_cmd);
 // User interaction
 void print_help(const char *app_path);
 int create_command(char *name, char *command, char *type);
+int menu();
 
 cmd_node *default_profile_for_app(string app_name);
 

@@ -4,6 +4,7 @@
 
 #include "wakit.h"
 #include "cli_io.h"
+#include "gui_io.h"
 #include "dynamic_string.h"
 #include "window_manager.h"
 
@@ -383,6 +384,43 @@ bool remove_command(cmd_node **list, char *name) {
   return true;
 }
 
+int menu() {
+  cmd_node *list = NULL;
+  if (load_cmd_list(&list) != 0) return 1;
+
+  if (!list) {
+    DEBUG("Empty list.");
+    return 0;
+  }
+
+  cmd_node *selected = ask_for_cmd(list);
+
+  if (!selected) {
+    DEBUG("Didn't select anything");
+    free_cmd_list(&list);
+    return 0;
+  }
+
+  string output = STR_INIT;
+  int ret = console(selected->info.cmd.str, &output);
+
+  if (ret) {
+    string error_msg = STR_INIT;
+    str_append(&error_msg, "Command failed with exit code ");
+    str_append_int(&error_msg, ret);
+    str_inspect(error_msg);
+    ERROR(error_msg.str);
+    str_free(&error_msg);
+  }
+
+  str_insert_at(&output, 0, "Command output: ");
+  DEBUG(output.str);
+
+  str_free(&output);
+  free_cmd_list(&list);
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   int ret = 0;
 
@@ -557,8 +595,7 @@ int main(int argc, char *argv[]) {
     free_cmd_list(&list);
 
   } else if (!strcmp(argv[1], "-m")) {
-    ERROR("Not implemented"); // TODO
-    return 1;
+    ret = menu();
 
   } else if (!strcmp(argv[1], "-s")) {
     ERROR("Not implemented"); // TODO
