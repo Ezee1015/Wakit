@@ -22,13 +22,11 @@ bool question_yn(char *msg) {
 }
 
 int console(char *cmd, string *output) {
-  if (output->str) {
+  if (output && output->str) {
     ERROR("empty the string!");
     return -1;
   }
-  *output = STR_INIT;
 
-  char buffer[256];
   FILE* pipe = popen(cmd, "r");
 
   if (!pipe) {
@@ -36,12 +34,17 @@ int console(char *cmd, string *output) {
     return 1;
   }
 
-  while (fgets(buffer, sizeof(buffer), pipe) != NULL)
-    str_append(output, buffer);
+  if (output) {
+    char buffer[256];
+    *output = STR_INIT;
 
-  // Removes the Line break at the end of the line if it's not empty
-  if (output->str_len != 0)
-    str_remove(output, output->str_len-1, output->str_len-1);
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL)
+      str_append(output, buffer);
+
+    // Removes the Line break at the end of the line if it's not empty
+    if (output->str_len != 0)
+      str_remove(output, output->str_len-1, output->str_len-1);
+  }
 
   return WEXITSTATUS(pclose(pipe));
 }
