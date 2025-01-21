@@ -120,6 +120,7 @@ int load_cmd_list(cmd_node **list) {
     INIT_CMD(c);
   }
 
+  fclose(f);
   return (ret == 1) ? 0 : -1;
 }
 
