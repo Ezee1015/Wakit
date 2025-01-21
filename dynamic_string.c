@@ -28,6 +28,31 @@ bool str_append(string *s, const char *append) {
   return true;
 }
 
+bool str_append_int(string *s, int append) {
+  if (!s) return false;
+
+  int aux = append;
+  int digits = (append == 0) ? 1 : 0;
+  while (aux != 0) {
+    aux /= 10;
+    digits++;
+  }
+
+  const size_t new_size = s->str_len + digits;
+
+  // Reallocate new space if necessary
+  if (!s->alloc_size || new_size > s->alloc_size-1) {
+    if (!str_resize(s, new_size)) return false;
+  }
+
+  for (int i=1; i<=digits; i++) {
+    s->str[s->str_len+digits-i] = append % 10 + '0';
+    append /= 10;
+  }
+  s->str_len = new_size;
+  return true;
+}
+
 void str_inspect(string s) {
   printf("[String inspect]: alloc_size: %ld ; str_len: %ld ; string: %s\n", s.alloc_size, s.str_len, s.str);
 

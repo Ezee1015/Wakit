@@ -19,6 +19,7 @@ typedef struct {
 
 void str_free(string *s);
 bool str_append(string *s, const char *append);
+bool str_append_int(string *s, const int append);
 bool str_replace(string *s, char *new_str);
 bool str_remove(string *s, const int from, const int to);
 bool str_insert_at(string *s, const int pos, const char *insert);
