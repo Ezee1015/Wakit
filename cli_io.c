@@ -22,10 +22,8 @@ bool question_yn(char *msg) {
 }
 
 int console(char *cmd, string *output) {
-  if (output && output->str) {
-    ERROR("empty the string!");
-    return -1;
-  }
+  if (output && output->str)
+    str_free(output);
 
   FILE* pipe = popen(cmd, "r");
 
