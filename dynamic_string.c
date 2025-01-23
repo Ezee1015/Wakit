@@ -49,6 +49,8 @@ bool str_append_int(string *s, int append) {
     s->str[s->str_len+digits-i] = append % 10 + '0';
     append /= 10;
   }
+
+  s->str[new_len] = '\0';
   s->str_len = new_len;
   return true;
 }
