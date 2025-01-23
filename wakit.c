@@ -589,6 +589,7 @@ int main(int argc, char *argv[]) {
           def_profile->info.default_for_app = false;
         }
         node->info.default_for_app = default_for_app;
+        break;
     }
 
     if (!save_cmd_list(list)) ret = 1;
