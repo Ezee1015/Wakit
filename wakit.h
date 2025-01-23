@@ -39,12 +39,15 @@ cmd_node *search_cmd(cmd_node *list, char *cmd_name);
 
 // cmd operations
 void print_cmd(cmd c, bool show_cmd);
+cmd duplicate_cmd(cmd info);
 
 // User interaction
 void print_help(const char *app_path);
 int create_command(char *name, char *command, char *type);
 int menu();
+int start_daemon();
 
-cmd_node *default_profile_for_app(string app_name);
+cmd_node *default_app_profile(cmd_node *list, char *app_name);
+cmd_node *search_profiles_app(cmd_node *list, char *app_name);
 
 #endif // WAKIT_H

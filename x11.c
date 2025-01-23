@@ -12,7 +12,7 @@ bool select_window(string *name) {
   int ret = console("xdotool selectwindow getwindowpid", &pid);
   if (ret) {
     str_free(&pid);
-    ERROR("Error while getting the PID of the window. The app is not compatible...");
+    DEBUG("Error while getting the PID of the window. The app is not compatible...");
     return false;
   }
 
@@ -25,7 +25,33 @@ bool select_window(string *name) {
   str_free(&pid);
   str_free(&cmd);
   if (ret) {
-    ERROR("Error while getting the name of the window.");
+    DEBUG("Error while getting the name of the window.");
+    str_free(name);
+    return false;
+  }
+
+  return true;
+}
+
+// get_active_window should not print anything as it's being executed constantly
+bool get_active_window(string *name) {
+  // Get PID
+  string pid = STR_INIT;
+  int ret = console("xdotool getactivewindow getwindowpid 2> /dev/null", &pid);
+  if (ret) {
+    str_free(&pid);
+    return false;
+  }
+
+  // Get name
+  string cmd = STR_INIT;
+  str_append(&cmd, "ps -p ");
+  str_append(&cmd, pid.str);
+  str_append(&cmd, " -o comm=");
+  ret = console(cmd.str, name);
+  str_free(&pid);
+  str_free(&cmd);
+  if (ret) {
     str_free(name);
     return false;
   }

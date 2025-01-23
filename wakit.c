@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "wakit.h"
 #include "cli_io.h"
@@ -9,6 +10,9 @@
 #include "window_manager.h"
 
 #define GTABLET "Wacom One by Wacom S Pen stylus"
+#define STOP_DAEMON_PATH "/tmp/stop.wakit"
+#define RUNNING_DAEMON_PATH "/tmp/running.wakit"
+#define DAEMON_DELAY 1
 
 void print_help(const char *app_path) {
   printf("Wakit is a command manager for xsetwacom that allows per-application configuration.\n");
@@ -32,7 +36,7 @@ void print_help(const char *app_path) {
   printf("\t                                    - app: if it's a profile, change the app that it's assign to. You should not input a new_value\n");
   printf("\t                                    - default: if it's a profile, change if it's the default profile for the app. Values are: yes/no\n");
   printf("\t-m ................................ Run menu\n");
-  printf("\t-s ................................ Run service\n");
+  printf("\t-d ................................ Start/Stop daemon\n");
 }
 
 bool add_command(cmd_node **list, cmd c) {
@@ -193,9 +197,9 @@ cmd_node *search_cmd(cmd_node *list, char *cmd_name) {
   return list;
 }
 
-cmd_node *default_app_profile(cmd_node *list, string app_name) {
+cmd_node *default_app_profile(cmd_node *list, char *app_name) {
   while (list) {
-    if (list->info.type==Profile && !strcmp(list->info.app.str, app_name.str) && list->info.default_for_app)
+    if (list->info.type==Profile && !strcmp(list->info.app.str, app_name) && list->info.default_for_app)
       return list;
 
     list = list->next;
@@ -253,7 +257,7 @@ int create_command(char *name, char *command, char *type) {
 
   // Make it the default profile if there's already one
   cmd_node *def_profile = NULL;
-  if (new_cmd.default_for_app && (def_profile = default_app_profile(list, new_cmd.app))) {
+  if (new_cmd.default_for_app && (def_profile = default_app_profile(list, new_cmd.app.str))) {
     DEBUG("There's already a default profile for the app. Disabling it...");
     def_profile->info.default_for_app = false;
   }
@@ -417,6 +421,148 @@ int menu() {
   DEBUG(output.str);
 
   str_free(&output);
+  free_cmd_list(&list);
+  return 0;
+}
+
+cmd duplicate_cmd(cmd info) {
+  cmd new;
+  INIT_CMD(new);
+
+  str_append(&(new.name), info.name.str);
+  str_append(&(new.app), info.app.str);
+  str_append(&(new.cmd), info.cmd.str);
+  new.type = info.type;
+  new.default_for_app = info.default_for_app;
+
+  return new;
+}
+
+// Creates a separated list with the available profiles for the given app
+cmd_node *search_profiles_app(cmd_node *list, char *app_name) {
+  cmd_node *availables = NULL, *aux = NULL;
+  if ( (aux = default_app_profile(list, app_name)) ) {
+    add_command(&availables, duplicate_cmd(aux->info));
+    return availables;
+  }
+
+  // Add custom profiles
+  if (strcmp(app_name,"generic")) {
+    aux = list;
+    while (aux) {
+      if (aux->info.type == Profile && !strcmp(aux->info.app.str, app_name))
+        add_command(&availables, duplicate_cmd(aux->info));
+
+      aux = aux->next;
+    }
+  }
+
+  // Add generic profiles
+  aux = list;
+  while (aux) {
+    if (aux->info.type == Profile && !strcmp(aux->info.app.str, "generic"))
+      add_command(&availables, duplicate_cmd(aux->info));
+
+    aux = aux->next;
+  }
+
+  return availables;
+}
+
+int start_daemon() {
+  cmd_node *list = NULL;
+  if (load_cmd_list(&list) != 0) return 1;
+
+  if (!list) {
+    DEBUG("Empty list.");
+    return 0;
+  }
+
+  string last_app = STR_INIT, app = STR_INIT;
+  DEBUG("Daemon running...");
+  while (access(STOP_DAEMON_PATH, F_OK)) {
+    // If it's unable to get the active window's app name, default to generic...
+    if (!get_active_window(&app)) str_replace(&app, "generic");
+
+    if (!last_app.str || strcmp(app.str, last_app.str)) {
+      cmd_node *profile = NULL;
+      cmd_node *available_profiles = search_profiles_app(list, app.str);
+
+      if (available_profiles && available_profiles->next) { // More than one profile
+        while (!profile) profile = ask_for_cmd(available_profiles);
+      } else {
+        profile = available_profiles;
+      }
+
+      // Debug information
+      DEBUG("----------------------------------------");
+      if (!strcmp(app.str, "generic")) DEBUG("Unable to get the active window's app name. Defaulting to generic...");
+      string debug_msg = STR_INIT;
+      str_append(&debug_msg, "The window focused has changed: ");
+      if (last_app.str) str_append(&debug_msg, last_app.str);
+      else str_append(&debug_msg, "[empty]");
+      str_append(&debug_msg, " --> ");
+      str_append(&debug_msg, app.str);
+      DEBUG(debug_msg.str);
+      cmd_node *aux = available_profiles;
+      if (aux && aux->info.default_for_app) { // Found a default profile
+        str_replace(&debug_msg, "Found a default profile: ");
+        str_append(&debug_msg, aux->info.name.str);
+      } else {
+        str_replace(&debug_msg, "Available profiles for the app: ");
+        while (aux) {
+          str_append(&debug_msg, aux->info.name.str);
+          if (aux->next) str_append(&debug_msg, ", ");
+          aux = aux->next;
+        }
+      }
+      DEBUG(debug_msg.str);
+      str_replace(&debug_msg, "Profile selected: ");
+      if (profile) str_append(&debug_msg, profile->info.name.str);
+      else str_append(&debug_msg, "No profile was found");
+      DEBUG(debug_msg.str);
+
+      // Update running file
+      FILE *f = fopen(RUNNING_DAEMON_PATH, "w");
+      string text = STR_INIT;
+      str_append(&text, app.str);
+      str_append(&text, " | ");
+      if (profile) str_append(&text, profile->info.name.str);
+      else str_append(&text, "-no profile-");
+      fwrite(text.str, text.str_len, 1, f);
+      str_free(&text);
+      fclose(f);
+
+      if (profile) {
+        // Apply profile
+        int ret = console(profile->info.cmd.str, &debug_msg);
+
+        str_insert_at(&debug_msg, 0, "Command output: ");
+        DEBUG(debug_msg.str);
+
+        if (ret) {
+          str_replace(&debug_msg, "The command failed with exit code ");
+          str_append_int(&debug_msg, ret);
+        } else {
+          str_replace(&debug_msg, "The command was executed successfully");
+        }
+        DEBUG(debug_msg.str);
+      }
+
+      str_free(&debug_msg);
+      free_cmd_list(&available_profiles);
+      str_replace(&last_app, app.str);
+    }
+
+    sleep(DAEMON_DELAY);
+  }
+  DEBUG("Daemon closed...");
+
+  if (remove(STOP_DAEMON_PATH))    ERROR("Unable to remove the stop file...");
+  if (remove(RUNNING_DAEMON_PATH)) ERROR("Unable to remove the running file...");
+
+  str_free(&app);
+  str_free(&last_app);
   free_cmd_list(&list);
   return 0;
 }
@@ -585,7 +731,7 @@ int main(int argc, char *argv[]) {
 
         bool default_for_app = (!strcmp(argv[4], "yes"));
         cmd_node *def_profile = NULL;
-        if ( default_for_app && (def_profile = default_app_profile(list, node->info.app)) ) {
+        if ( default_for_app && (def_profile = default_app_profile(list, node->info.app.str)) ) {
           DEBUG("There's already a default profile for the app. Disabling it...");
           def_profile->info.default_for_app = false;
         }
@@ -599,9 +745,14 @@ int main(int argc, char *argv[]) {
   } else if (!strcmp(argv[1], "-m")) {
     ret = menu();
 
-  } else if (!strcmp(argv[1], "-s")) {
-    ERROR("Not implemented"); // TODO
-    return 1;
+  } else if (!strcmp(argv[1], "-d")) {
+    if (!access(RUNNING_DAEMON_PATH, F_OK)) {
+      FILE *f = fopen(STOP_DAEMON_PATH, "w");
+      fclose(f);
+      DEBUG("Closing daemon...");
+    } else {
+      ret = start_daemon();
+    }
 
   } else {
     string error_msg = STR_INIT;
