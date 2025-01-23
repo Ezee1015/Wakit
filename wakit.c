@@ -9,7 +9,8 @@
 #include "dynamic_string.h"
 #include "window_manager.h"
 
-#define GTABLET "Wacom One by Wacom S Pen stylus"
+#define TABLET_MODEL "Wacom One by Wacom S Pen stylus"
+#define MODEL_PLACEHOLDER "%TabletID%"
 #define STOP_DAEMON_PATH "/tmp/stop.wakit"
 #define RUNNING_DAEMON_PATH "/tmp/running.wakit"
 #define DAEMON_DELAY 1
@@ -388,6 +389,20 @@ bool remove_command(cmd_node **list, char *name) {
   return true;
 }
 
+int run_cmd(cmd cmd, string *output) {
+  string command = STR_INIT, model = STR_INIT;
+  str_append(&command, cmd.cmd.str);
+  str_append(&model, "'");
+  str_append(&model, TABLET_MODEL);
+  str_append(&model, "'");
+  str_search_and_replace(&command, MODEL_PLACEHOLDER, model.str);
+
+  int ret = console(command.str, output);
+  str_free(&command);
+  str_free(&model);
+  return ret;
+}
+
 int menu() {
   cmd_node *list = NULL;
   if (load_cmd_list(&list) != 0) return 1;
@@ -406,7 +421,7 @@ int menu() {
   }
 
   string output = STR_INIT;
-  int ret = console(selected->info.cmd.str, &output);
+  int ret = run_cmd(selected->info, &output);
 
   if (ret) {
     string error_msg = STR_INIT;
@@ -536,7 +551,7 @@ int start_daemon() {
 
       if (profile) {
         // Apply profile
-        int ret = console(profile->info.cmd.str, &debug_msg);
+        int ret = run_cmd(profile->info, &debug_msg);
 
         if (debug_msg.str) {
           str_insert_at(&debug_msg, 0, "Command output: ");
