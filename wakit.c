@@ -568,6 +568,7 @@ int main(int argc, char *argv[]) {
           str_free(&(node->info.app));
           node->info.app = app_name;
         }
+        break;
 
       case cmd_default:
         if (node->info.type != Profile) {
