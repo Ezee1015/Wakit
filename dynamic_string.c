@@ -16,15 +16,15 @@ bool str_append(string *s, const char *append) {
   if (!s) return false;
   if (!append) return true;
 
-  const size_t new_size = s->str_len + strlen(append);
+  const size_t new_len = s->str_len + strlen(append);
 
   // Reallocate new space if necessary
-  if (!s->alloc_size || new_size > s->alloc_size-1) {
-    if (!str_resize(s, new_size)) return false;
+  if (!s->alloc_size || new_len > s->alloc_size-1) {
+    if (!str_resize(s, new_len)) return false;
   }
 
   strcpy(s->str+s->str_len, append);
-  s->str_len = new_size;
+  s->str_len = new_len;
   return true;
 }
 
@@ -38,18 +38,18 @@ bool str_append_int(string *s, int append) {
     digits++;
   }
 
-  const size_t new_size = s->str_len + digits;
+  const size_t new_len = s->str_len + digits;
 
   // Reallocate new space if necessary
-  if (!s->alloc_size || new_size > s->alloc_size-1) {
-    if (!str_resize(s, new_size)) return false;
+  if (!s->alloc_size || new_len > s->alloc_size-1) {
+    if (!str_resize(s, new_len)) return false;
   }
 
   for (int i=1; i<=digits; i++) {
     s->str[s->str_len+digits-i] = append % 10 + '0';
     append /= 10;
   }
-  s->str_len = new_size;
+  s->str_len = new_len;
   return true;
 }
 
