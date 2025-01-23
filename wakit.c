@@ -412,13 +412,14 @@ int menu() {
     string error_msg = STR_INIT;
     str_append(&error_msg, "Command failed with exit code ");
     str_append_int(&error_msg, ret);
-    str_inspect(error_msg);
     ERROR(error_msg.str);
     str_free(&error_msg);
   }
 
-  str_insert_at(&output, 0, "Command output: ");
-  DEBUG(output.str);
+  if (output.str) {
+    str_insert_at(&output, 0, "Command output: ");
+    DEBUG(output.str);
+  }
 
   str_free(&output);
   free_cmd_list(&list);
@@ -537,8 +538,10 @@ int start_daemon() {
         // Apply profile
         int ret = console(profile->info.cmd.str, &debug_msg);
 
-        str_insert_at(&debug_msg, 0, "Command output: ");
-        DEBUG(debug_msg.str);
+        if (debug_msg.str) {
+          str_insert_at(&debug_msg, 0, "Command output: ");
+          DEBUG(debug_msg.str);
+        }
 
         if (ret) {
           str_replace(&debug_msg, "The command failed with exit code ");
