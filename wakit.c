@@ -506,6 +506,13 @@ int start_daemon() {
 
       if (available_profiles && available_profiles->next) { // More than one profile
         while (!profile) profile = ask_for_cmd(available_profiles);
+
+        // Remember the selection for this session. We can activate
+        // default_for_app as the changes to the list are not been saved to disk
+        // and it will make the profile selected enable automatically when
+        // focusing in the app again
+        if (strcmp(app.str, "generic"))
+          search_cmd(list, profile->info.name.str)->info.default_for_app = true;
       } else {
         profile = available_profiles;
       }
