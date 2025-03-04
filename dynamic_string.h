@@ -11,12 +11,6 @@ typedef struct {
   size_t alloc_size;
 } string;
 
-#define STR_INIT (string) {   \
-    .str = NULL,              \
-    .alloc_size = 0,          \
-    .str_len = 0              \
-  }
-
 void str_free(string *s);
 bool str_append(string *s, const char *append);
 bool str_append_int(string *s, const int append);

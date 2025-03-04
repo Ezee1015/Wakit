@@ -8,7 +8,7 @@ bool select_window(string *name) {
   printf("Click on the app...\n");
 
   // Get PID
-  string pid = STR_INIT;
+  string pid = {0};
   int ret = console("xdotool selectwindow getwindowpid", &pid);
   if (ret) {
     str_free(&pid);
@@ -17,7 +17,7 @@ bool select_window(string *name) {
   }
 
   // Get name
-  string cmd = STR_INIT;
+  string cmd = {0};
   str_append(&cmd, "ps -p ");
   str_append(&cmd, pid.str);
   str_append(&cmd, " -o comm=");
@@ -36,7 +36,7 @@ bool select_window(string *name) {
 // get_active_window should not print anything as it's being executed constantly
 bool get_active_window(string *name) {
   // Get PID
-  string pid = STR_INIT;
+  string pid = {0};
   int ret = console("xdotool getactivewindow getwindowpid 2> /dev/null", &pid);
   if (ret) {
     str_free(&pid);
@@ -44,7 +44,7 @@ bool get_active_window(string *name) {
   }
 
   // Get name
-  string cmd = STR_INIT;
+  string cmd = {0};
   str_append(&cmd, "ps -p ");
   str_append(&cmd, pid.str);
   str_append(&cmd, " -o comm=");

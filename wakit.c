@@ -102,7 +102,7 @@ bool get_config_path(string *path) {
 //   -1 --> Format error
 //   0  --> OK
 int load_cmd_list(cmd_node **list) {
-  string path = STR_INIT;
+  string path = {0};
   if (!get_config_path(&path)) {
     ERROR("Get yourself a home");
     return 1;
@@ -144,7 +144,7 @@ bool save_cmd_list(cmd_node *list) {
     return false;
   }
 
-  string path = STR_INIT;
+  string path = {0};
   if (!get_config_path(&path)) {
     ERROR("Get yourself a home");
     return 1;
@@ -218,7 +218,7 @@ int create_command(char *name, char *command, char *type) {
   } else if (!strcmp(type, "profile")) {
     new_cmd.type = Profile;
   } else {
-    string err = STR_INIT;
+    string err = {0};
     str_append(&err, "Command type not recognized: ");
     str_append(&err, type);
     ERROR(err.str);
@@ -318,7 +318,7 @@ int list_commands(int argc, char *argv[]) {
       mode = Actions;
 
     } else {
-      string err = STR_INIT;
+      string err = {0};
       str_append(&err, "Unrecognized option for 'list' mode: ");
       str_append(&err, argv[i]);
       ERROR(err.str);
@@ -328,7 +328,7 @@ int list_commands(int argc, char *argv[]) {
     }
   }
 
-  string app_name = STR_INIT;
+  string app_name = {0};
   if (mode == Filter && !select_window(&app_name)) {
     ERROR("Unable to filter for this app...");
     str_free(&app_name);
@@ -390,7 +390,7 @@ bool remove_command(cmd_node **list, char *name) {
 }
 
 int run_cmd(cmd cmd, string *output) {
-  string command = STR_INIT, model = STR_INIT;
+  string command = {0}, model = {0};
   str_append(&command, cmd.cmd.str);
   str_append(&model, "'");
   str_append(&model, TABLET_MODEL);
@@ -420,11 +420,11 @@ int menu() {
     return 0;
   }
 
-  string output = STR_INIT;
+  string output = {0};
   int ret = run_cmd(selected->info, &output);
 
   if (ret) {
-    string error_msg = STR_INIT;
+    string error_msg = {0};
     str_append(&error_msg, "Command failed with exit code ");
     str_append_int(&error_msg, ret);
     ERROR(error_msg.str);
@@ -494,7 +494,7 @@ int start_daemon() {
     return 0;
   }
 
-  string last_app = STR_INIT, app = STR_INIT;
+  string last_app = {0}, app = {0};
   DEBUG("Daemon running...");
   while (access(STOP_DAEMON_PATH, F_OK)) {
     // If it's unable to get the active window's app name, default to generic...
@@ -520,7 +520,7 @@ int start_daemon() {
       // Debug information
       DEBUG("----------------------------------------");
       if (!strcmp(app.str, "generic")) DEBUG("Unable to get the active window's app name. Defaulting to generic...");
-      string debug_msg = STR_INIT;
+      string debug_msg = {0};
       str_append(&debug_msg, "The window focused has changed: ");
       if (last_app.str) str_append(&debug_msg, last_app.str);
       else str_append(&debug_msg, "[empty]");
@@ -547,7 +547,7 @@ int start_daemon() {
 
       // Update running file
       FILE *f = fopen(RUNNING_DAEMON_PATH, "w");
-      string text = STR_INIT;
+      string text = {0};
       str_append(&text, app.str);
       str_append(&text, " | ");
       if (profile) str_append(&text, profile->info.name.str);
@@ -701,7 +701,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    string app_name = STR_INIT;
+    string app_name = {0};
     switch (var) {
       case cmd_name:
         str_replace(&(node->info.name), argv[4]);
@@ -780,7 +780,7 @@ int main(int argc, char *argv[]) {
     }
 
   } else {
-    string error_msg = STR_INIT;
+    string error_msg = {0};
     str_append(&error_msg, "Mode not recognized: ");
     str_append(&error_msg, argv[1]);
     ERROR(error_msg.str);

@@ -6,11 +6,11 @@
 cmd_node *ask_for_cmd(cmd_node *list) {
   if (!list) return NULL;
 
-  string cmd = STR_INIT;
+  string cmd = {0};
   str_append(&cmd, "echo \"");
 
   cmd_node *aux = list;
-  string name = STR_INIT;
+  string name = {0};
   while (aux) {
     str_replace(&name, aux->info.name.str);
     str_search_and_replace(&name, "\"", "\\\"");
@@ -24,7 +24,7 @@ cmd_node *ask_for_cmd(cmd_node *list) {
 
   str_append(&cmd, "\" | rofi -dmenu");
 
-  string output = STR_INIT;
+  string output = {0};
   int ret = console(cmd.str, &output);
   str_free(&cmd);
 

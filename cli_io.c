@@ -34,7 +34,6 @@ int console(char *cmd, string *output) {
 
   if (output) {
     char buffer[256];
-    *output = STR_INIT;
 
     while (fgets(buffer, sizeof(buffer), pipe) != NULL)
       str_append(output, buffer);
