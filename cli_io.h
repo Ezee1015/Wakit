@@ -11,6 +11,8 @@ void error(const char *msg, char *filename, int line);
 void debug(const char *msg, char *filename, int line);
 bool question_yn(char *msg);
 
-int console(char *cmd, string *output);
+int console_input(char *cmd, const char *input);
+int console_output(char *cmd, string *output);
+int console_silent(char *cmd);
 
 #endif // CLI_IO_H

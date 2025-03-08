@@ -397,7 +397,7 @@ int run_cmd(cmd cmd, string *output) {
   str_append(&model, "'");
   str_search_and_replace(&command, MODEL_PLACEHOLDER, model.str);
 
-  int ret = console(command.str, output);
+  int ret = console_output(command.str, output);
   str_free(&command);
   str_free(&model);
   return ret;

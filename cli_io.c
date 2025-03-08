@@ -21,27 +21,42 @@ bool question_yn(char *msg) {
          : false;
 }
 
-int console(char *cmd, string *output) {
-  if (output && output->str)
-    str_free(output);
+int console_input(char *cmd, const char *input) {
+  if (!cmd || !input) return 1;
 
-  FILE* pipe = popen(cmd, "r");
-
+  FILE *pipe = popen(cmd, "w");
   if (!pipe) {
     ERROR("popen() failed!");
     return 1;
   }
 
-  if (output) {
-    char buffer[256];
+  fprintf(pipe, "%s", input);
+  return WEXITSTATUS(pclose(pipe));
+}
 
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL)
-      str_append(output, buffer);
+int console_output(char *cmd, string *output) {
+  if (!cmd || !output) return 1;
+  if (output->str) str_free(output);
 
-    // Removes the Line break at the end of the line if it's not empty
-    if (output->str_len != 0)
-      str_remove(output, output->str_len-1, output->str_len-1);
+  FILE* pipe = popen(cmd, "r");
+  if (!pipe) {
+    ERROR("popen() failed!");
+    return 1;
   }
 
+  char buffer[256];
+  while (fgets(buffer, sizeof(buffer), pipe) != NULL)
+    str_append(output, buffer);
+
+  // Removes the line break at the end of the line
+  if (output->str_len != 0)
+    output->str[output->str_len-1] = '\0';
+
   return WEXITSTATUS(pclose(pipe));
+}
+
+int console_silent(char *cmd) {
+  if (!cmd) return 1;
+
+  return system(cmd);
 }

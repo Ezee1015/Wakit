@@ -3,7 +3,7 @@
 
 #include "dynamic_string.h"
 
-#define BLOCK_SIZE 50
+#define BLOCK_SIZE 64
 
 bool str_resize(string *s, size_t str_len) {
   const size_t alloc_size = BLOCK_SIZE * (str_len / BLOCK_SIZE + 1);
@@ -24,6 +24,22 @@ bool str_append(string *s, const char *append) {
   }
 
   strcpy(s->str+s->str_len, append);
+  s->str_len = new_len;
+  return true;
+}
+
+bool str_append_char(string *s, const char c) {
+  if (!s) return false;
+
+  const size_t new_len = s->str_len + 1;
+
+  // Reallocate new space if necessary
+  if (!s->alloc_size || new_len > s->alloc_size-1) {
+    if (!str_resize(s, new_len)) return false;
+  }
+
+  s->str[s->str_len] = c;
+  s->str[s->str_len+1] = '\0';
   s->str_len = new_len;
   return true;
 }

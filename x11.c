@@ -9,7 +9,7 @@ bool select_window(string *name) {
 
   // Get PID
   string pid = {0};
-  int ret = console("xdotool selectwindow getwindowpid", &pid);
+  int ret = console_output("xdotool selectwindow getwindowpid", &pid);
   if (ret) {
     str_free(&pid);
     DEBUG("Error while getting the PID of the window. The app is not compatible...");
@@ -21,7 +21,7 @@ bool select_window(string *name) {
   str_append(&cmd, "ps -p ");
   str_append(&cmd, pid.str);
   str_append(&cmd, " -o comm=");
-  ret = console(cmd.str, name);
+  ret = console_output(cmd.str, name);
   str_free(&pid);
   str_free(&cmd);
   if (ret) {
@@ -37,7 +37,7 @@ bool select_window(string *name) {
 bool get_active_window(string *name) {
   // Get PID
   string pid = {0};
-  int ret = console("xdotool getactivewindow getwindowpid 2> /dev/null", &pid);
+  int ret = console_output("xdotool getactivewindow getwindowpid 2> /dev/null", &pid);
   if (ret) {
     str_free(&pid);
     return false;
@@ -48,7 +48,7 @@ bool get_active_window(string *name) {
   str_append(&cmd, "ps -p ");
   str_append(&cmd, pid.str);
   str_append(&cmd, " -o comm=");
-  ret = console(cmd.str, name);
+  ret = console_output(cmd.str, name);
   str_free(&pid);
   str_free(&cmd);
   if (ret) {
