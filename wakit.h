@@ -21,9 +21,9 @@ typedef struct {
 } cmd;
 
 // Init cmd strigs
-#define INIT_CMD(c) c.cmd  = (string) {NULL, 0 ,0}; \
-                    c.name = (string) {NULL, 0 ,0}; \
-                    c.app  = (string) {NULL, 0 ,0};
+#define INIT_CMD(c) c.cmd  = (string) {NULL, 0, 0}; \
+                    c.name = (string) {NULL, 0, 0}; \
+                    c.app  = (string) {NULL, 0, 0};
 
 typedef struct command_node {
   cmd info;

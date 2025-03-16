@@ -485,6 +485,34 @@ cmd_node *search_profiles_app(cmd_node *list, char *app_name) {
   return availables;
 }
 
+struct generic_selection_list {
+  string app;
+  cmd_node *profile; // (should be generic)
+
+  struct generic_selection_list *next;
+};
+typedef struct generic_selection_list generic_selection_list;
+
+void free_generic_selection(generic_selection_list **list) {
+  while (*list) {
+    generic_selection_list *aux = *list;
+    *list = aux->next;
+    str_free(&(aux->app));
+    free_cmd_list(&(aux->profile));
+    free(aux);
+  }
+}
+
+cmd_node *search_generic_selection(generic_selection_list *list, const char *app_name) {
+  while (list && strcmp(list->app.str, app_name)) list = list->next;
+  if (!list) return NULL;
+
+  cmd_node *n = malloc(sizeof(cmd_node));
+  n->next = NULL;
+  n->info = duplicate_cmd(list->profile->info);
+  return n;
+}
+
 int start_daemon() {
   cmd_node *list = NULL;
   if (load_cmd_list(&list) != 0) return 1;
@@ -494,25 +522,48 @@ int start_daemon() {
     return 0;
   }
 
-  string last_app = {0}, app = {0};
+  // To remember the selection of a generic profile (custom profiles are
+  // remembered by changing to 'true' the default_for_app variable)
+  generic_selection_list *generic_selection = NULL;
+
   DEBUG("Daemon running...");
+  string last_app = {0}, app = {0};
   while (access(STOP_DAEMON_PATH, F_OK)) {
     // If it's unable to get the active window's app name, default to generic...
     if (!get_active_window(&app)) str_replace(&app, "generic");
 
     if (!last_app.str || strcmp(app.str, last_app.str)) {
       cmd_node *profile = NULL;
-      cmd_node *available_profiles = search_profiles_app(list, app.str);
+      cmd_node *available_profiles = NULL;
+      if ( !(available_profiles = search_generic_selection(generic_selection, app.str)) )
+        available_profiles = search_profiles_app(list, app.str);
 
       if (available_profiles && available_profiles->next) { // More than one profile
         while (!profile) profile = ask_for_cmd(available_profiles);
 
-        // Remember the selection for this session. We can activate
-        // default_for_app as the changes to the list are not been saved to disk
-        // and it will make the profile selected enable automatically when
-        // focusing in the app again
-        if (strcmp(app.str, "generic"))
-          search_cmd(list, profile->info.name.str)->info.default_for_app = true;
+        // Remember the selection for this session.
+        //
+        // We can activate default_for_app as the changes to the list are not
+        // been saved to disk and it will make the custom profile selected
+        // enable automatically when focusing in the app again.
+        //
+        // If it's a generic profile, it's added to the list "generic_selection"
+        // for future reference.
+        if (strcmp(app.str, "generic")) {
+          if (!strcmp(profile->info.app.str, "generic")) {
+            generic_selection_list *new_element = malloc(sizeof(generic_selection_list));
+            new_element->app = (string) {NULL, 0, 0};
+            str_append(&(new_element->app), app.str);
+            new_element->profile = malloc(sizeof(cmd_node));
+            new_element->profile->next = NULL;
+            new_element->profile->info = duplicate_cmd(profile->info);
+            new_element->next = generic_selection;
+            generic_selection = new_element;
+          } else {
+            search_cmd(list, profile->info.name.str)->info.default_for_app = true;
+          }
+        }
+
       } else {
         profile = available_profiles;
       }
@@ -589,6 +640,7 @@ int start_daemon() {
   str_free(&app);
   str_free(&last_app);
   free_cmd_list(&list);
+  free_generic_selection(&generic_selection);
   return 0;
 }
 
