@@ -19,7 +19,7 @@ cmd_node *ask_for_cmd(cmd_node *list) {
   }
   str_free(&name);
 
-  if (console_input("rofi -dmenu > /tmp/rofi_temp.wakit", input.str)) {
+  if (console_input("rofi -dmenu -i > /tmp/rofi_temp.wakit", input.str)) {
     str_free(&input);
     return NULL;
   }
