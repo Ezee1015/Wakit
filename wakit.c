@@ -38,6 +38,7 @@ void print_help(const char *app_path) {
   printf("\t                                    - default: if it's a profile, change if it's the default profile for the app. Values are: yes/no\n");
   printf("\t-m ................................ Run menu\n");
   printf("\t-d ................................ Start/Stop daemon\n");
+  printf("\t--export .......................... Print all the commands as wakit instructions\n");
 }
 
 bool add_command(cmd_node **list, cmd c) {
@@ -362,6 +363,38 @@ int list_commands(int argc, char *argv[]) {
   }
 
   free_cmd_list(&list);
+  return 0;
+}
+
+int print_instructions(cmd_node *list, char *wakit_path) {
+  if (!list) return 1;
+
+  while (list) {
+    cmd info = list->info;
+    if (!str_search_and_replace(&info.cmd, "\"", "\\\"")) return 1;
+    printf("%s -a \"%s\" \"%s\" ", wakit_path, info.name.str, info.cmd.str);
+
+    switch (info.type) {
+      case Profile:
+        printf("profile");
+
+        if (!info.app.str) return 1;
+        if (!strcmp(info.app.str, "generic")) {
+          printf(" # Generic\n");
+          break;
+        }
+        printf(" # Custom to %s", info.app.str);
+        if (info.default_for_app) printf(" (Default)\n");
+        else putc('\n', stdout);
+        break;
+      case Action:
+        printf("action\n");
+        break;
+    }
+
+    list = list->next;
+  }
+
   return 0;
 }
 
@@ -821,6 +854,15 @@ int main(int argc, char *argv[]) {
 
   } else if (!strcmp(argv[1], "-m")) {
     ret = menu();
+
+  } else if (!strcmp(argv[1], "--export")) {
+    cmd_node *list = NULL;
+    if (load_cmd_list(&list) == -1) {
+      ERROR("Can't load the save file");
+      return 1;
+    }
+    ret = print_instructions(list, argv[0]);
+    free_cmd_list(&list);
 
   } else if (!strcmp(argv[1], "-d")) {
     if (!access(RUNNING_DAEMON_PATH, F_OK)) {
