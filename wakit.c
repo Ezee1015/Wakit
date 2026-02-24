@@ -29,7 +29,8 @@ void print_help(const char *app_path) {
   printf("\t     --profiles ................... Show only profiles\n");
   printf("\t     --actions .................... Show only actions\n");
   printf("\t     --show-cmd ................... Show the console command to be executed for each command\n");
-  printf("\t-r [name] ......................... Remove a command\n");
+  printf("\t--remove [name] ................... Remove a command\n");
+  printf("\t-r, --run [name] .................. Run a command\n");
   printf("\t-e [name] [variable] [new_value] .. Edit a command. Variables:\n");
   printf("\t                                    - name: Name of the command\n");
   printf("\t                                    - command: Command to execute\n");
@@ -474,6 +475,38 @@ int menu() {
   return 0;
 }
 
+bool run(cmd_node *list, char *cmd_name) {
+  cmd_node *selected = search_cmd(list, cmd_name);
+  if (!selected) {
+    string error_msg = {0};
+    str_append(&error_msg, "Unable to find the command '");
+    str_append(&error_msg, cmd_name);
+    str_append(&error_msg, "'");
+    ERROR(error_msg.str);
+    str_free(&error_msg);
+    return false;
+  }
+
+  string output = {0};
+  int ret = run_cmd(selected->info, &output);
+
+  if (ret) {
+    string error_msg = {0};
+    str_append(&error_msg, "Command failed with exit code ");
+    str_append_int(&error_msg, ret);
+    ERROR(error_msg.str);
+    str_free(&error_msg);
+  }
+
+  if (output.str) {
+    str_insert_at(&output, 0, "Command output: ");
+    DEBUG(output.str);
+    str_free(&output);
+  }
+
+  return (ret == 0);
+}
+
 cmd duplicate_cmd(cmd info) {
   cmd new;
   INIT_CMD(new);
@@ -693,9 +726,9 @@ int main(int argc, char *argv[]) {
   } else if (!strcmp(argv[1], "-l")) {
     ret = list_commands(argc, argv);
 
-  } else if (!strcmp(argv[1], "-r")) {
+  } else if (!strcmp(argv[1], "--remove")) {
     if (argc != 3) {
-      ERROR("Expected the command id.");
+      ERROR("Expected the command name.");
       return 1;
     }
 
@@ -872,6 +905,19 @@ int main(int argc, char *argv[]) {
     } else {
       ret = start_daemon();
     }
+
+  } else if (!strcmp(argv[1], "--run") || !strcmp(argv[1], "-r")) {
+    if (argc != 3) {
+      ERROR("Expected the command name.");
+      return 1;
+    }
+    cmd_node *list = NULL;
+    if (load_cmd_list(&list) == -1) {
+      ERROR("Can't load the save file");
+      return 1;
+    }
+    ret = (run(list, argv[2])) ? 0 : 1;
+    free_cmd_list(&list);
 
   } else {
     string error_msg = {0};

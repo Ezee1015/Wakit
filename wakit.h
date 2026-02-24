@@ -45,6 +45,7 @@ cmd duplicate_cmd(cmd info);
 void print_help(const char *app_path);
 int create_command(char *name, char *command, char *type);
 int menu();
+bool run(cmd_node *list, char *cmd_name);
 int start_daemon();
 
 cmd_node *default_app_profile(cmd_node *list, char *app_name);
