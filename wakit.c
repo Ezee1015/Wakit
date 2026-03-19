@@ -43,6 +43,7 @@ void print_help(const char *app_path) {
   printf("\t-m ................................ Run menu\n");
   printf("\t-d ................................ Start/Stop daemon\n");
   printf("\t--export .......................... Print all the commands as wakit instructions\n");
+  printf("\t--move [name] ..................... Move a command inside the list\n");
 }
 
 bool add_command(cmd_node **list, cmd c) {
@@ -69,6 +70,32 @@ bool add_command(cmd_node **list, cmd c) {
   while (aux->next) aux = aux->next;
   aux->next = new_node;
 
+  return true;
+}
+
+bool insert_command_node_at(cmd_node **list, cmd_node *node, unsigned int pos) {
+  if (!list) return false;
+
+  if (pos == 0 || !(*list)) {
+    node->next = *list;
+    *list = node;
+    return true;
+  }
+
+  cmd_node *previous = NULL;
+  cmd_node *aux = *list;
+  while (aux && pos) {
+    pos--;
+    previous = aux;
+    aux = aux->next;
+  }
+  // I need to be able to select one position after the end of the list to indicate
+  // "insert the element at the end of the list"
+  if (!aux && pos > 0) return false;
+
+  // Insert after the node
+  node->next = previous->next;
+  previous->next = node;
   return true;
 }
 
@@ -289,14 +316,10 @@ int create_command(char *name, char *command, char *type) {
   free_cmd_list(&list);
 }
 
-int list_commands(int argc, char *argv[]) {
-  cmd_node *list = NULL;
-  if (load_cmd_list(&list) != 0) {
-    free_cmd_list(&list);
-    return 1;
-  }
-
+int list_commands(cmd_node *list, int argc, char *argv[]) {
   bool show_cmd = false;
+  bool numbered = false;
+  bool insert_numbered = false;
   enum Mode {
     Default,
     Filter,
@@ -308,10 +331,15 @@ int list_commands(int argc, char *argv[]) {
     if (!strcmp(argv[i], "--show-cmd")) {
       show_cmd = true;
 
+    } else if (!strcmp(argv[i], "--numbered")) {
+      numbered = true;
+
+    } else if (!strcmp(argv[i], "--numbered-insert")) {
+      insert_numbered = true;
+
     } else if (!strcmp(argv[i], "--filter-by-app")) {
       if (mode != Default) {
         ERROR("List mode already selected...");
-        free_cmd_list(&list);
         return 1;
       }
       mode = Filter;
@@ -319,7 +347,6 @@ int list_commands(int argc, char *argv[]) {
     } else if (!strcmp(argv[i], "--profiles")) {
       if (mode != Default) {
         ERROR("List mode already selected...");
-        free_cmd_list(&list);
         return 1;
       }
       mode = Profiles;
@@ -327,7 +354,6 @@ int list_commands(int argc, char *argv[]) {
     } else if (!strcmp(argv[i], "--actions")) {
       if (mode != Default) {
         ERROR("List mode already selected...");
-        free_cmd_list(&list);
         return 1;
       }
       mode = Actions;
@@ -338,7 +364,6 @@ int list_commands(int argc, char *argv[]) {
       str_append(&err, argv[i]);
       ERROR(err.str);
       str_free(&err);
-      free_cmd_list(&list);
       return 1;
     }
   }
@@ -347,21 +372,30 @@ int list_commands(int argc, char *argv[]) {
   if (mode == Filter && !select_window(&app_name)) {
     ERROR("Unable to filter for this app...");
     str_free(&app_name);
-    free_cmd_list(&list);
     return 1;
   }
 
   cmd_node *aux = list;
+  int i=1;
+  if (insert_numbered) {
+    printf("1)\n");
+  }
   while (aux) {
     if ( (mode == Default)
          || (mode == Profiles && aux->info.type == Profile)
          || (mode == Actions && aux->info.type == Action)
          || (mode == Filter && aux->info.type == Profile && !strcmp(aux->info.app.str, app_name.str))
     ) {
-      if (aux->info.type == Action)
-        printf("--> %s (Action)", aux->info.name.str);
-      else {
-        printf("--> %s ", aux->info.name.str);
+      if (numbered) {
+        printf("%d) ", i);
+      } else {
+        printf("--> ");
+      }
+      printf("%s ", aux->info.name.str);
+
+      if (aux->info.type == Action) {
+        printf("(Action)");
+      } else {
         if (!strcmp(aux->info.app.str, "generic")) {
           printf("(Generic Profile)");
         } else {
@@ -372,13 +406,17 @@ int list_commands(int argc, char *argv[]) {
       }
       if (show_cmd) printf("\n\tCommand: %s\n\n", aux->info.cmd.str);
       else printf("\n");
+
+      if (insert_numbered) {
+        printf("%d)\n", i+1);
+      }
     }
 
     aux = aux->next;
+    i++;
   }
 
   str_free(&app_name);
-  free_cmd_list(&list);
   return 0;
 }
 
@@ -414,15 +452,14 @@ int print_instructions(cmd_node *list, char *wakit_path) {
   return 0;
 }
 
-bool remove_command(cmd_node **list, char *name) {
-  if (!list || !(*list)) return false;
+cmd_node *remove_command(cmd_node **list, char *name) {
+  if (!list || !(*list)) return NULL;
 
   // Check the first element
   if ( !strcmp((*list)->info.name.str, name) ) {
     cmd_node *aux = *list;
     *list = (*list)->next;
-    free_cmd(aux);
-    return true;
+    return aux;
   }
 
   // Another element
@@ -432,10 +469,9 @@ bool remove_command(cmd_node **list, char *name) {
     current = current->next;
   }
 
-  if (!current) return false;
+  if (!current) return NULL;
   prev->next = current->next;
-  free_cmd(current);
-  return true;
+  return current;
 }
 
 int run_cmd(cmd cmd, string *output) {
@@ -725,6 +761,46 @@ int start_daemon() {
   return 0;
 }
 
+int move_command_menu(char *name) {
+  if (!name) return 1;
+
+  cmd_node *list = NULL;
+  if (load_cmd_list(&list) == -1) {
+    free_cmd_list(&list);
+    ERROR("Can't load the save file");
+    return 1;
+  }
+
+  cmd_node *node = remove_command(&list, name);
+  if (!node) {
+    ERROR("Unable to find the Command with that name");
+    free_cmd_list(&list);
+    return 1;
+  }
+
+  list_commands(list, 3, (char*[3]){NULL, NULL, "--numbered-insert"});
+
+  printf("Position to move: ");
+  unsigned int to = 0;
+  scanf("%u", &to);
+  printf("\n");
+  if (to == 0) {
+    free_cmd_list(&list);
+    ERROR("Invalid position to move the command");
+    return 1;
+  }
+
+  if (!insert_command_node_at(&list, node, to-1 /* 1-based to 0-based */)) {
+    free_cmd_list(&list);
+    ERROR("Unable to insert the command");
+    return 1;
+  }
+
+  save_cmd_list(list);
+  free_cmd_list(&list);
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   int ret = 0;
 
@@ -739,7 +815,14 @@ int main(int argc, char *argv[]) {
     ret = create_command(argv[2], argv[3], argv[4]);
 
   } else if (!strcmp(argv[1], "-l")) {
-    ret = list_commands(argc, argv);
+    cmd_node *list = NULL;
+    if (load_cmd_list(&list) != 0) {
+      free_cmd_list(&list);
+      return 1;
+    }
+
+    ret = list_commands(list, argc-2, argv+2);
+    free_cmd_list(&list);
 
   } else if (!strcmp(argv[1], "--remove")) {
     if (argc != 3) {
@@ -752,11 +835,13 @@ int main(int argc, char *argv[]) {
       ERROR("Can't load the save file");
       return 1;
     }
-    if (!remove_command(&list, argv[2])) {
+    cmd_node *to_remove = remove_command(&list, argv[2]);
+    if (!to_remove) {
       ERROR("Couldn't delete the command...");
       free_cmd_list(&list);
       return 1;
     }
+    free_cmd(to_remove);
     if (!save_cmd_list(list)) {
       ERROR("Can't save the file");
       free_cmd_list(&list);
@@ -939,6 +1024,13 @@ int main(int argc, char *argv[]) {
     }
     ret = (run(list, argv[2])) ? 0 : 1;
     free_cmd_list(&list);
+
+  } else if (!strcmp(argv[1], "--move")) {
+    if (argc != 3) {
+      ERROR("The name of the command to move was expected");
+      return 1;
+    }
+    ret = move_command_menu(argv[2]);
 
   } else {
     string error_msg = {0};

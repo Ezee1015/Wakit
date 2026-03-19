@@ -37,9 +37,12 @@ bool save_cmd_list(cmd_node *list);
 void free_cmd_list(cmd_node **list);
 cmd_node *search_cmd(cmd_node *list, char *cmd_name);
 int print_instructions(cmd_node *list, char *wakit_path);
+bool insert_command_node_at(cmd_node **list, cmd_node *node, unsigned int pos);
+cmd_node *remove_command(cmd_node **list, char *name);
 
 // cmd operations
 cmd duplicate_cmd(cmd info);
+void free_cmd(cmd_node *cmd);
 
 // User interaction
 void print_help(const char *app_path);
