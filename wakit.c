@@ -281,7 +281,10 @@ int create_command(char *name, char *command, char *type) {
 
 int list_commands(int argc, char *argv[]) {
   cmd_node *list = NULL;
-  if (load_cmd_list(&list) != 0) return 1;
+  if (load_cmd_list(&list) != 0) {
+    free_cmd_list(&list);
+    return 1;
+  }
 
   bool show_cmd = false;
   enum Mode {
@@ -338,29 +341,30 @@ int list_commands(int argc, char *argv[]) {
     return 1;
   }
 
-  while (list) {
+  cmd_node *aux = list;
+  while (aux) {
     if ( (mode == Default)
-         || (mode == Profiles && list->info.type == Profile)
-         || (mode == Actions && list->info.type == Action)
-         || (mode == Filter && !strcmp(list->info.app.str, app_name.str))
+         || (mode == Profiles && aux->info.type == Profile)
+         || (mode == Actions && aux->info.type == Action)
+         || (mode == Filter && !strcmp(aux->info.app.str, app_name.str))
     ) {
-      if (list->info.type == Action)
-        printf("--> %s (Action)", list->info.name.str);
+      if (aux->info.type == Action)
+        printf("--> %s (Action)", aux->info.name.str);
       else {
-        printf("--> %s ", list->info.name.str);
-        if (!strcmp(list->info.app.str, "generic")) {
+        printf("--> %s ", aux->info.name.str);
+        if (!strcmp(aux->info.app.str, "generic")) {
           printf("(Generic Profile)");
         } else {
           printf("(");
-          if (list->info.default_for_app) printf("Default ");
-          printf("Profile for %s)", list->info.app.str);
+          if (aux->info.default_for_app) printf("Default ");
+          printf("Profile for %s)", aux->info.app.str);
         }
       }
-      if (show_cmd) printf("\n\tCommand: %s\n\n", list->info.cmd.str);
+      if (show_cmd) printf("\n\tCommand: %s\n\n", aux->info.cmd.str);
       else printf("\n");
     }
 
-    list = list->next;
+    aux = aux->next;
   }
 
   free_cmd_list(&list);
