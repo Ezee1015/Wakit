@@ -11,7 +11,7 @@ wakit: $(OFILES)
 	$(CC) $(LDFLAGS) $(OFILES) -o wakit
 
 %.o: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) -o $@ -c $< -ggdb
 
 run: wakit
 	./wakit
