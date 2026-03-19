@@ -33,10 +33,13 @@ void print_help(const char *app_path) {
   printf("\t-r, --run [name] .................. Run a command\n");
   printf("\t-e [name] [variable] [new_value] .. Edit a command. Variables:\n");
   printf("\t                                    - name: Name of the command\n");
-  printf("\t                                    - command: Command to execute\n");
-  printf("\t                                    - type: 'action' or 'profile'\n");
-  printf("\t                                    - app: if it's a profile, change the app that it's assign to. You should not input a new_value\n");
-  printf("\t                                    - default: if it's a profile, change if it's the default profile for the app. Values are: yes/no\n");
+  printf("\t                                    - variable: 'name', 'command', 'type', 'app', 'default'\n");
+  printf("\t                                    - new_value: \n");
+  printf("\t                                        - variable name: Name of the command\n");
+  printf("\t                                        - variable command: Command to execute\n");
+  printf("\t                                        - variable type: 'action' or 'profile'\n");
+  printf("\t                                        - variable app: if it's a profile, change the app that it's assign to. You should not input a new_value\n");
+  printf("\t                                        - variable default: if it's a profile, change if it's the default profile for the app. Values are: yes/no\n");
   printf("\t-m ................................ Run menu\n");
   printf("\t-d ................................ Start/Stop daemon\n");
   printf("\t--export .......................... Print all the commands as wakit instructions\n");
@@ -243,7 +246,11 @@ int create_command(char *name, char *command, char *type) {
       new_cmd.default_for_app = question_yn("Do you want to make it default for the app?");
     } else {
       str_append(&new_cmd.app, "generic");
+      new_cmd.default_for_app = false;
     }
+  } else {
+    new_cmd.app = (string){0};
+    new_cmd.default_for_app = false;
   }
 
   cmd_node *list = NULL;
@@ -255,6 +262,9 @@ int create_command(char *name, char *command, char *type) {
   if (aux) {
     ERROR("Command name is already registered");
     free_cmd_list(&list);
+    str_free(&new_cmd.name);
+    str_free(&new_cmd.cmd);
+    str_free(&new_cmd.app);
     return 1;
   }
 
@@ -346,7 +356,7 @@ int list_commands(int argc, char *argv[]) {
     if ( (mode == Default)
          || (mode == Profiles && aux->info.type == Profile)
          || (mode == Actions && aux->info.type == Action)
-         || (mode == Filter && !strcmp(aux->info.app.str, app_name.str))
+         || (mode == Filter && aux->info.type == Profile && !strcmp(aux->info.app.str, app_name.str))
     ) {
       if (aux->info.type == Action)
         printf("--> %s (Action)", aux->info.name.str);
@@ -367,6 +377,7 @@ int list_commands(int argc, char *argv[]) {
     aux = aux->next;
   }
 
+  str_free(&app_name);
   free_cmd_list(&list);
   return 0;
 }
@@ -751,6 +762,7 @@ int main(int argc, char *argv[]) {
       free_cmd_list(&list);
       return 1;
     }
+    free_cmd_list(&list);
 
   } else if (!strcmp(argv[1], "-e")) {
     if (argc == 2) {
@@ -834,12 +846,17 @@ int main(int argc, char *argv[]) {
         break;
 
       case cmd_type:
-        str_replace(&(node->info.app), "generic");
         node->info.default_for_app = false;
-        if (!strcmp(argv[4], "profile"))
+        if (!strcmp(argv[4], "profile")) {
+          str_replace(&(node->info.app), "generic");
+
           node->info.type = Profile;
-        else
+        } else {
+          if (node->info.app.str) str_free(&node->info.app);
+          node->info.app = (string) {0};
+
           node->info.type = Action;
+        }
         break;
 
       case cmd_app:
