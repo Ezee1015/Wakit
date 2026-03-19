@@ -327,7 +327,7 @@ int list_commands(cmd_node *list, int argc, char *argv[]) {
     Actions
   } mode = Default;
 
-  for (int i=2; i<argc; i++) {
+  for (int i=0; i<argc; i++) {
     if (!strcmp(argv[i], "--show-cmd")) {
       show_cmd = true;
 
@@ -778,7 +778,7 @@ int move_command_menu(char *name) {
     return 1;
   }
 
-  list_commands(list, 3, (char*[3]){NULL, NULL, "--numbered-insert"});
+  list_commands(list, 1, (char*[1]){"--numbered-insert"});
 
   printf("Position to move: ");
   unsigned int to = 0;
